@@ -45,25 +45,26 @@ def error_output(handler, content, content_type='text/html', status=503):
 
 class MainPage(webapp.RequestHandler):
 
-    def conver_url(self, orig_url):
+    def convert_url(self, orig_url):
         (scm, netloc, path, params, query, _) = urlparse.urlparse(orig_url)
         
-        path_parts = path.split('/')
+        path = path.replace('//','/')
+        path_list = path[1:].split('/', 1)
+        sub_domain = path_list[0]
         
-        if path_parts[1] == 'api' or path_parts[1] == 'search':
-            sub_head = path_parts[1]
-            path_parts = path_parts[2:]
-            path_parts.insert(0,'')
-            new_path = '/'.join(path_parts).replace('//','/')
-            new_netloc = sub_head + '.twitter.com'
-        elif path_parts[1].startswith('search'):
+        if sub_domain in ['api', 'search', 'stream', 'userstream']:
+            new_path = '/'
+            if len(path_list) > 1: 
+                 new_path += path_list[1]
+            new_netloc = sub_domain + '.twitter.com'
+        elif sub_domain.startswith('search'):
             new_path = path
             new_netloc = 'search.twitter.com'
         else:
             new_path = path
             new_netloc = 'twitter.com'
     
-        new_url = urlparse.urlunparse(('https', new_netloc, new_path.replace('//','/'), params, query, ''))
+        new_url = urlparse.urlunparse(('https', new_netloc, new_path, params, query, ''))
         return new_url, new_path
 
     def parse_auth_header(self, headers):
@@ -83,7 +84,7 @@ class MainPage(webapp.RequestHandler):
         orig_url = self.request.url
         orig_body = self.request.body
 
-        new_url,new_path = self.conver_url(orig_url)
+        new_url,new_path = self.convert_url(orig_url)
 
         if new_path == '/' or new_path == '':
             global gtap_message
